@@ -10,7 +10,7 @@ from PIL import Image
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QMainWindow, QApplication, QLabel, QSizePolicy
+from PySide6.QtWidgets import QMainWindow, QApplication, QLabel
 
 # - = - = - = - = - = - = - = - = - = - = -
 parser = argparse.ArgumentParser(
@@ -47,10 +47,24 @@ def make_spectrogram(width, height):
 		print(f"sox error occures: {stderr}")
 
 def def_tick_handler():
+	# - = - = - = - = - = - = - = - = -
+	window_width = window_width_old = w.frameGeometry().width()
+	window_height = window_height_old = w.frameGeometry().height()
 	while True:
-		if render.redraw_required is True:
+		window_width = w.frameGeometry().width()
+		window_height = w.frameGeometry().height()
+		if window_width != window_width_old or window_height != window_height_old:
+			window_width_old = window_width
+			window_height_old = window_height
 			w.redraw_spectrogram()
-			render.redraw_required = False
+			print(f"Redrawn for {window_width}x{window_height}")
+		# - = - = - = - = - = - = - = - = -
+
+		# - REDRAWER = - = - = - = - = - = -
+		#if render.redraw_required is True:
+		#	w.redraw_spectrogram()
+		#s	render.redraw_required = False
+		# - = - = - = - = - = - = - = - = -
 		time.sleep(0.1)
 
 class RenderClass():
@@ -78,13 +92,6 @@ class MainWindow(QMainWindow):
 		self.setCentralWidget(render.label)
 		#self.resize(pixmap.width(), pixmap.height())
 
-	def resizeEvent(self, event):
-		print("Window has been resized")
-		print(f"Window size: {self.width()} x {self.height()}")
-		#render.label.setText("Window side detected. Press 'Y' to redraw the spectrogram")
-		render.redraw_required = True
-		super(MainWindow, self).resizeEvent(event)
-
 	def keyPressEvent(self, event):
 		if event.key() == Qt.Key_Y:
 			self.handle_y_key_press()
@@ -101,11 +108,11 @@ class MainWindow(QMainWindow):
 		#render.label.setFixedSize(self.sizeHint())
 		print("Redraw complete!")
 
+app = QApplication(sys.argv)
+w = MainWindow()
+
 tick_handler = Thread(target=def_tick_handler, daemon=True)
 tick_handler.start()
 
-app = QApplication(sys.argv)
-w = MainWindow()
 w.show()
 sys.exit(app.exec())
-
