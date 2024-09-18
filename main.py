@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import copy
 import argparse
 
 from threading import Thread
@@ -61,7 +62,7 @@ class DrawClass():
 			"color":	{"current": 1, "min": 1, "max": 6},	 # -p num  Permute colours (1 - 6); default 1
 			"maxdBFS":  {"current": 0, "min": -100, "max": 100}, # -Z num  Z-axis maximum in dBFS; default 0
 				}
-		self.variables = self.default_variables.copy()
+		self.variables = copy.deepcopy(self.default_variables)
 draw = DrawClass()
 
 # - = - = - = - = - = - = - = - = - = - = -
@@ -133,10 +134,10 @@ def make_spectrogram(width, height):
 	# - = - = - = - = - = - = - = - = - = - = -
 
 	proc = subprocess.Popen(sox_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	print("Postprocessing..")
 
 	img_data = proc.stdout.read()
 
+	print("Postprocessing..")
 	try:
 		with Image.open(BytesIO(img_data)) as img:
 			b = BytesIO()
@@ -201,9 +202,17 @@ class MainWindow(QMainWindow):
 		render.label.setScaledContents(True)
 
 		# - = - = - = - = - = - = - = - = - = - = -
+
+		render.progress_bar = QProgressBar()
+		render.progress_bar.setRange(0, 0)  # Infinite mode
+		render.progress_bar.setVisible(False)
+
+		# - = - = - = - = - = - = - = - = - = - = -
 		# Drag-n-drop layout
 		self.layout = QVBoxLayout()
 		self.layout.addWidget(render.label)
+		self.layout.addWidget(render.progress_bar) # progress_bar
+
 		self.setLayout(self.layout)
 		# - = - = - = - = - = - = - = - = - = - = -
 
@@ -217,6 +226,11 @@ class MainWindow(QMainWindow):
 		# Force redraw
 		if event.key() == Qt.Key_Y:
 			render.redraw_required = True
+		if event.key() == Qt.Key_R:
+			draw.variables = copy.deepcopy(draw.default_variables)
+			render.redraw_required = True
+			render.redraw_required_message = "The settings have been reset"
+			render.redraw_required_message_ticks = 30
 
 		# - = - = - = - = - = - = - = - = - = - = -
 		# contrast
@@ -288,13 +302,10 @@ class MainWindow(QMainWindow):
 			urls = event.mimeData().urls()
 			if len(urls) == 1:
 				audio_file = urls[0].toLocalFile()
-				render.label.setText("Accepted. Processing..")
 				global this_file
 				this_file = FileClass(audio_file)
 				render.redraw_required = True
-				#progress_bar = QProgressBar()
-				#progress_bar.setRange(0, 0)  # Устанавливаем бесконечный режим
-				#self.layout.addWidget(progress_bar)
+				render.progress_bar.setVisible(True)
 		event.acceptProposedAction()
 	# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
@@ -305,6 +316,8 @@ class MainWindow(QMainWindow):
 		render.pixmap.loadFromData(make_spectrogram(render.width, render.height))
 		render.label.setPixmap(render.pixmap)
 		#render.label.setFixedSize(self.sizeHint())
+		if hasattr(render, 'progress_bar'):
+			render.progress_bar.setVisible(False)
 		print("Redraw complete!")
 
 app = QApplication(sys.argv)
