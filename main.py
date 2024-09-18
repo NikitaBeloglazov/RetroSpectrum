@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import argparse
@@ -12,7 +13,18 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QMainWindow, QApplication, QLabel
 
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QProgressBar
+from PySide6.QtCore import QMimeData
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
+
+# - = - = - = - = - = - = -
+modules_path = os.path.dirname(os.path.realpath(__file__)) # get currently running script path
+# print(modules_path)
+sys.path.append(modules_path)
+import ffprobe
+from render import dialog_boxes
 # - = - = - = - = - = - = - = - = - = - = -
+
 parser = argparse.ArgumentParser(
 	prog = 'RetroSpectrum',
 	description = 'Shows the spectrogram of an audio file. Similar to the Spek program',
@@ -21,14 +33,32 @@ parser = argparse.ArgumentParser(
 parser.add_argument('filename', metavar="<filename>", help='The media file to be opened') # positional argument
 args = parser.parse_args()
 media_file = args.filename
+
+# - = - = - = - = - = - = - = - = - = - = -
+
+supported_formats = ("8svx", ".aif", ".aifc", ".aiff", ".aiffc", ".al", ".amb", ".amr-nb", ".amr-wb", ".anb", ".au", ".avr", ".awb", ".caf", ".cdda", ".cdr", ".cvs", ".cvsd", ".cvu", ".dat", ".dvms", ".f32", ".f4", ".f64", ".f8", ".fap", ".flac", ".fssd", ".gsm", ".gsrt", ".hcom", ".htk", ".ima", ".ircam", ".la", ".lpc", ".lpc10", ".lu", ".mat", ".mat4", ".mat5", ".maud", ".mp2", ".mp3", ".nist", ".ogg", ".opus", ".paf", ".prc", ".pvf", ".raw", ".s1", ".s16", ".s2", ".s24", ".s3", ".s32", ".s4", ".s8", ".sb", ".sd2", ".sds", ".sf", ".sl", ".sln", ".smp", ".snd", ".sndfile", ".sndr", ".sndt", ".sou", ".sox", ".sph", ".sw", ".txw", ".u1", ".u16", ".u2", ".u24", ".u3", ".u32", ".u4", ".u8", ".ub", ".ul", ".uw", ".vms", ".voc", ".vorbis", ".vox", ".w64", ".wav", ".wavpcm", ".wv", ".wve", ".xa", ".xi") # need for drag-n-drop
+
+class FileClass:
+	def __init__(self, media_file):
+		# - = - = - = - = - = - = - = - = - = - = -
+		# Check file existance
+		if os.path.isfile(media_file) is False:
+			message = "Seems like file does not exist:\n" + media_file
+			dialog_boxes.error_dialog_box(message)
+		# - = - = - = - = - = - = - = - = - = - = -
+		self.ffmpeg_text = ffprobe.get_ffprobe_string(media_file)
+		# - = - = - = - = - = - = - = - = - = - = -
+		self.filename = media_file
+this_file = FileClass(media_file)
+
 # - = - = - = - = - = - = - = - = - = - = -
 
 class DrawClass():
 	def __init__(self):
 		self.default_variables = {
 			"contrast": {"current": 80, "min": 20, "max": 180}, # -z num  Z-axis range in dB; default 120
-			"channels": {"current": 1, "min": 1, "max": 2},	    # remix
-			"color":    {"current": 1, "min": 1, "max": 6},     # -p num  Permute colours (1 - 6); default 1
+			"channels": {"current": 1, "min": 1, "max": 2},		# remix
+			"color":	{"current": 1, "min": 1, "max": 6},	 # -p num  Permute colours (1 - 6); default 1
 			"maxdBFS":  {"current": 0, "min": -100, "max": 100}, # -Z num  Z-axis maximum in dBFS; default 0
 				}
 		self.variables = self.default_variables.copy()
@@ -36,12 +66,14 @@ draw = DrawClass()
 
 # - = - = - = - = - = - = - = - = - = - = -
 
+
 def make_spectrogram(width, height):
+	# - = - = - = - = - = - = -
 	print("Drawing...")
 
 	# - Command generator = - = - = - = - = - =
 	sox_command = [
-		'sox', media_file, '-n', # base command
+		'sox', this_file.filename, '-n', # base command
 	]
 
 	# - = Сhannels
@@ -64,12 +96,18 @@ def make_spectrogram(width, height):
 	# - = - = - =
 
 	# - = Comment shown
+	# Spaces for when the rounding overlaps the text
 	if render.redraw_required_message is None:
 		sox_command.append("-c")
-		sox_command.append("Created by SoX and RetroSpectrum")
+		sox_command.append("  Created by SoX and RetroSpectrum")
 	else:
 		sox_command.append("-c")
-		sox_command.append(render.redraw_required_message)
+		sox_command.append("  " + render.redraw_required_message)
+	# - = - = - =
+
+	# - = Title text
+	sox_command.append("-t")
+	sox_command.append(this_file.ffmpeg_text)
 	# - = - = - =
 
 	# - = Contrast
@@ -152,6 +190,7 @@ class MainWindow(QMainWindow):
 		super(MainWindow, self).__init__()
 		self.title = "RetroSpectrum"
 		self.setWindowTitle(self.title)
+		self.setAcceptDrops(True)
 
 		# Create widget
 		render.label = QLabel(self)
@@ -160,6 +199,13 @@ class MainWindow(QMainWindow):
 
 		self.redraw_spectrogram()
 		render.label.setScaledContents(True)
+
+		# - = - = - = - = - = - = - = - = - = - = -
+		# Drag-n-drop layout
+		self.layout = QVBoxLayout()
+		self.layout.addWidget(render.label)
+		self.setLayout(self.layout)
+		# - = - = - = - = - = - = - = - = - = - = -
 
 		# Minimum sox image size
 		self.setMinimumSize(100+144, 130)
@@ -224,6 +270,33 @@ class MainWindow(QMainWindow):
 		render.redraw_required_message = f"Setting \"{setting}\" changed: [{symbol}] {draw.variables[setting]['current']}"
 		render.redraw_required_message += f" (min {draw.variables[setting]['min']} / max {draw.variables[setting]['max']})"
 		render.redraw_required_message_ticks = 30
+
+	# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+	# Drag-n-drop support
+	def dragEnterEvent(self, event: QDragEnterEvent):
+		if event.mimeData().hasUrls():  # Check that the data contains URLs (files)
+			urls = event.mimeData().urls()
+			if len(urls) == 1 and urls[0].toString().endswith(supported_formats): # Checking the extension
+				event.acceptProposedAction()  # We only accept audio files
+			else:
+				event.ignore() # Ignore if these are not audio files
+		else:
+			event.ignore()
+
+	def dropEvent(self, event: QDropEvent):
+		if event.mimeData().hasUrls():
+			urls = event.mimeData().urls()
+			if len(urls) == 1:
+				audio_file = urls[0].toLocalFile()
+				render.label.setText("Accepted. Processing..")
+				global this_file
+				this_file = FileClass(audio_file)
+				render.redraw_required = True
+				#progress_bar = QProgressBar()
+				#progress_bar.setRange(0, 0)  # Устанавливаем бесконечный режим
+				#self.layout.addWidget(progress_bar)
+		event.acceptProposedAction()
+	# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
 	def redraw_spectrogram(self):
 		print("Redrawing..")
