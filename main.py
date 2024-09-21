@@ -50,7 +50,20 @@ class FileClass:
 		self.ffmpeg_text = ffprobe.get_ffprobe_string(media_file)
 		# - = - = - = - = - = - = - = - = - = - = -
 		self.filename = media_file
-this_file = FileClass(media_file)
+
+	def open_file(self, filename):
+		""" Opens a new file and reinitializes class """
+
+		# To be honest, I don't understand what this is and what kind of warning,
+		# and what they're talking about in relevant issues.
+		# https://github.com/pylint-dev/pylint/issues/6889
+		# https://github.com/pylint-dev/pylint/issues/8082
+		self.__init__(filename) # pylint: disable=unnecessary-dunder-call
+
+		render.redraw_required = True
+		render.progress_bar.setVisible(True)
+
+file_controller = FileClass(media_file)
 
 # - = - = - = - = - = - = - = - = - = - = -
 
@@ -63,6 +76,11 @@ class DrawClass():
 			"maxdBFS":  {"current": 0, "min": -100, "max": 100}, # -Z num  Z-axis maximum in dBFS; default 0
 				}
 		self.variables = copy.deepcopy(self.default_variables)
+
+	def reset(self):
+		""" Resets variables to default values """
+		self.variables = copy.deepcopy(self.default_variables)
+
 draw = DrawClass()
 
 # - = - = - = - = - = - = - = - = - = - = -
@@ -74,7 +92,7 @@ def make_spectrogram(width, height):
 
 	# - Command generator = - = - = - = - = - =
 	sox_command = [
-		'sox', this_file.filename, '-n', # base command
+		'sox', file_controller.filename, '-n', # base command
 	]
 
 	# - = Сhannels
@@ -108,7 +126,7 @@ def make_spectrogram(width, height):
 
 	# - = Title text
 	sox_command.append("-t")
-	sox_command.append(this_file.ffmpeg_text)
+	sox_command.append(file_controller.ffmpeg_text)
 	# - = - = - =
 
 	# - = Contrast
@@ -227,7 +245,7 @@ class MainWindow(QMainWindow):
 		if event.key() == Qt.Key_Y:
 			render.redraw_required = True
 		if event.key() == Qt.Key_R:
-			draw.variables = copy.deepcopy(draw.default_variables)
+			draw.reset()
 			render.redraw_required = True
 			render.redraw_required_message = "The settings have been reset"
 			render.redraw_required_message_ticks = 30
@@ -291,7 +309,7 @@ class MainWindow(QMainWindow):
 		if event.mimeData().hasUrls():  # Check that the data contains URLs (files)
 			urls = event.mimeData().urls()
 			if len(urls) == 1 and urls[0].toString().endswith(supported_formats): # Checking the extension
-				event.acceptProposedAction()  # We only accept audio files
+				event.acceptProposedAction()  # We accept only audio files
 			else:
 				event.ignore() # Ignore if these are not audio files
 		else:
@@ -302,10 +320,9 @@ class MainWindow(QMainWindow):
 			urls = event.mimeData().urls()
 			if len(urls) == 1:
 				audio_file = urls[0].toLocalFile()
-				global this_file
-				this_file = FileClass(audio_file)
-				render.redraw_required = True
-				render.progress_bar.setVisible(True)
+				global file_controller
+				file_controller.open_file(audio_file)
+
 		event.acceptProposedAction()
 	# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 
