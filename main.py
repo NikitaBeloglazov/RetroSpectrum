@@ -170,7 +170,7 @@ def make_spectrogram(width, height):
 	if stderr:
 		print(f"sox error occures: {stderr}")
 
-def def_tick_handler():
+def def_tick_redraw_handler():
 	# - = - = - = - = - = - = - = - = -
 	window_width = window_width_old = w.frameGeometry().width()
 	window_height = window_height_old = w.frameGeometry().height()
@@ -196,8 +196,16 @@ def def_tick_handler():
 				render.redraw_required_message = None
 				render.redraw_required = True
 		# - = - = - = - = - = - = - = - = -
+		time.sleep(0.1)
+
+def def_tick_handler():
+	while True:
+		# - = - = - = - = - = - = - = - = -
 		# - = Window title definer
-		render.main_window.setWindowTitle("RetroSpectrum — " + file_controller.base_filename)
+		if render.redraw_required_message is not None:
+			render.main_window.setWindowTitle(f"RetroSpectrum — {render.redraw_required_message} — {file_controller.base_filename}")
+		else:
+			render.main_window.setWindowTitle("RetroSpectrum — " + file_controller.base_filename)
 		# - = - = - = - = - = - = - = - = -
 		time.sleep(0.1)
 
@@ -350,6 +358,8 @@ render.main_window = w
 
 tick_handler = Thread(target=def_tick_handler, daemon=True)
 tick_handler.start()
+tick_redraw_handler = Thread(target=def_tick_redraw_handler, daemon=True)
+tick_redraw_handler.start()
 
 w.show()
 sys.exit(app.exec())
