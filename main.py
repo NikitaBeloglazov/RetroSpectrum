@@ -18,6 +18,8 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QProgressBar
 from PySide6.QtCore import QMimeData
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
+from PySide6.QtGui import QIcon
+
 # - = - = - = - = - = - = -
 modules_path = os.path.dirname(os.path.realpath(__file__)) # get currently running script path
 # print(modules_path)
@@ -353,6 +355,25 @@ class MainWindow(QMainWindow):
 		print("Redraw complete!")
 
 app = QApplication(sys.argv)
+
+# - = - = - = - = - = - = - = - = -
+# - = Pre-setting icon finder
+QIcon.setFallbackSearchPaths([
+	os.path.expanduser("~/.local/share/icons/"), # standart UNIX path
+	"/usr/share/icons/",                         # standart UNIX path
+	os.path.dirname(os.path.realpath(__file__)) + "/resources/"
+	# get currently running script path, gather directly from module folder/etc
+])
+QIcon.setFallbackThemeName("hicolor")
+# - = - = - = - = - = - = - = - = -
+# - = Set icon
+icon = QIcon.fromTheme("RetroSpectrum")
+if not icon.isNull():
+	app.setWindowIcon(icon)
+else:
+	print("Get RetroSpectrum icon failed, seems icon not found!")
+# - = - = - = - = - = - = - = - = -
+
 w = MainWindow()
 render.main_window = w
 
