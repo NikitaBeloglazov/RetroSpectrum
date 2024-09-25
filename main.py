@@ -222,6 +222,9 @@ class MainWindow(QMainWindow):
 		# - = - = - = - = - = - = - = - = - = - = -
 
 		render.progress_bar = QProgressBar()
+		render.progress_bar.setWindowTitle("RetroSpectrum - Processing..")
+		render.progress_bar.setWindowFlags(Qt.Window | Qt.WindowStaysOnTopHint | Qt.SubWindow | Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+		render.progress_bar.setFixedSize(200, 38)
 		render.progress_bar.setRange(0, 0)  # Infinite mode
 		render.progress_bar.setVisible(False)
 
