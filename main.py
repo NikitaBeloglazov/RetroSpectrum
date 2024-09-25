@@ -50,6 +50,7 @@ class FileClass:
 		self.ffmpeg_text = ffprobe.get_ffprobe_string(media_file)
 		# - = - = - = - = - = - = - = - = - = - = -
 		self.filename = media_file
+		self.base_filename = os.path.basename(media_file)
 
 	def open_file(self, filename):
 		""" Opens a new file and reinitializes class """
@@ -194,6 +195,9 @@ def def_tick_handler():
 			if render.redraw_required_message_ticks == 0:
 				render.redraw_required_message = None
 				render.redraw_required = True
+		# - = - = - = - = - = - = - = - = -
+		# - = Window title definer
+		render.main_window.setWindowTitle("RetroSpectrum — " + file_controller.base_filename)
 		# - = - = - = - = - = - = - = - = -
 		time.sleep(0.1)
 
@@ -342,6 +346,7 @@ class MainWindow(QMainWindow):
 
 app = QApplication(sys.argv)
 w = MainWindow()
+render.main_window = w
 
 tick_handler = Thread(target=def_tick_handler, daemon=True)
 tick_handler.start()
