@@ -274,15 +274,6 @@ class PaletteButtonsClass():
 			self.colors_group.addAction(i)
 			main_window.color_menu_bar.addAction(i)
 
-		"""
-		main_window.color_menu_bar.addAction(self.color_1)
-		main_window.color_menu_bar.addAction(self.color_2)
-		main_window.color_menu_bar.addAction(self.color_3)
-		main_window.color_menu_bar.addAction(self.color_4)
-		main_window.color_menu_bar.addAction(self.color_5)
-		main_window.color_menu_bar.addAction(self.color_6)
-		"""
-
 		main_window.color_menu_bar.addSeparator()
 		main_window.color_menu_bar.addAction(self.color_reset)
 
@@ -403,17 +394,20 @@ class MainWindow(QMainWindow):
 		self.view_menu_bar.addSeparator()
 		# - = - =
 
-		self.color_menu_bar = self.menu_bar.addMenu("Palette")
-		PaletteButtonsClass(self)
+		self.channels = QAction("Show multiple channels", self)
+		self.channels.setCheckable(True)
+		self.channels.setShortcut(QKeySequence("S"))
+		self.channels.triggered.connect(self.channels_switch)
+		self.view_menu_bar.addAction(self.channels)
 
-		channels = QAction("Show multiple channels", self)
-		channels.setCheckable(True)
-		channels.setShortcut(QKeySequence("S"))
-		channels.triggered.connect(lambda: self.setting_change("channels", "set", value=1+channels.isChecked()))
-
-		# Add to menu
+		channels = QAction("Reset all", self)
+		channels.setShortcut(QKeySequence("R"))
+		channels.triggered.connect(self.reset_all_settings)
 		self.view_menu_bar.addAction(channels)
 
+		# - = - = - = - = - = - = - = - = - = - = -
+		self.color_menu_bar = self.menu_bar.addMenu("Palette")
+		PaletteButtonsClass(self)
 		# - = - = - = - = - = - = - = - = - = - = -
 
 		# Minimum sox image size
@@ -426,17 +420,21 @@ class MainWindow(QMainWindow):
 		# Force redraw
 		if event.key() == Qt.Key_Y:
 			render.redraw_required = True
-		if event.key() == Qt.Key_R:
-			draw.reset()
-			render.redraw_required = True
-			render.redraw_required_message = "The settings have been reset"
-			render.redraw_required_message_ticks = 30
 
 		# - = - = - = - = - = - = - = - = - = - = -
 		# channels
 		#if event.key() == Qt.Key_C:
 		#	self.setting_change("color", "carousel")
 		# - = - = - = - = - = - = - = - = - = - = -
+
+	def reset_all_settings(self):
+		draw.reset()
+		render.redraw_required = True
+		render.redraw_required_message = "The settings have been reset"
+		render.redraw_required_message_ticks = 30
+
+	def channels_switch(self):
+		self.setting_change("channels", "set", value=self.channels.isChecked()+1)
 
 	def setting_change(self, setting, action, value=None):
 		if setting not in draw.variables:
