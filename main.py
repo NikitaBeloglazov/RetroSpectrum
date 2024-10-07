@@ -18,6 +18,9 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QProgressBar
 from PySide6.QtCore import QMimeData
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
+from PySide6.QtWidgets import QMenuBar, QFileDialog
+from PySide6.QtGui import QAction, QKeySequence, QActionGroup
+
 from PySide6.QtGui import QIcon
 
 # - = - = - = - = - = - = -
@@ -218,6 +221,86 @@ class RenderClass():
 		self.redraw_required_message_ticks = 0
 render = RenderClass()
 
+class PaletteButtonsClass():
+	def __init__(self, main_window):
+		self.main_window = main_window
+		self.color_switch = QAction("Switch to next", main_window)
+		self.color_switch.setShortcut(QKeySequence("C"))
+		self.color_switch.triggered.connect(lambda: self.set_color())
+
+		self.colors_group = QActionGroup(main_window)
+		self.colors_group.setExclusive(True)
+		self.colors = []
+
+		self.color_1 = QAction("Yellow - Red - Pink", main_window)
+		self.color_1.setCheckable(True)
+		self.color_1.setChecked(True)
+		self.color_1.triggered.connect(lambda: self.set_color(1))
+		self.colors.append(self.color_1)
+
+		self.color_2 = QAction("Green - Blue", main_window)
+		self.color_2.setCheckable(True)
+		self.color_2.triggered.connect(lambda: self.set_color(2))
+		self.colors.append(self.color_2)
+
+		self.color_3 = QAction("Green - Brown", main_window)
+		self.color_3.setCheckable(True)
+		self.color_3.triggered.connect(lambda: self.set_color(3))
+		self.colors.append(self.color_3)
+
+		self.color_4 = QAction("Pink - Dark Green", main_window)
+		self.color_4.setCheckable(True)
+		self.color_4.triggered.connect(lambda: self.set_color(4))
+		self.colors.append(self.color_4)
+
+		self.color_5 = QAction("Blue - Green", main_window)
+		self.color_5.setCheckable(True)
+		self.color_5.triggered.connect(lambda: self.set_color(5))
+		self.colors.append(self.color_5)
+
+		self.color_6 = QAction("Blue - Magenta", main_window)
+		self.color_6.setCheckable(True)
+		self.color_6.triggered.connect(lambda: self.set_color(6))
+		self.colors.append(self.color_6)
+
+		self.color_reset = QAction("Reset", main_window)
+		self.color_reset.triggered.connect(lambda: main_window.setting_change("color", "reset"))
+
+		# Add to menu
+		main_window.color_menu_bar.addAction(self.color_switch)
+		main_window.color_menu_bar.addSeparator()
+
+		for i in self.colors:
+			self.colors_group.addAction(i)
+			main_window.color_menu_bar.addAction(i)
+
+		"""
+		main_window.color_menu_bar.addAction(self.color_1)
+		main_window.color_menu_bar.addAction(self.color_2)
+		main_window.color_menu_bar.addAction(self.color_3)
+		main_window.color_menu_bar.addAction(self.color_4)
+		main_window.color_menu_bar.addAction(self.color_5)
+		main_window.color_menu_bar.addAction(self.color_6)
+		"""
+
+		main_window.color_menu_bar.addSeparator()
+		main_window.color_menu_bar.addAction(self.color_reset)
+
+	def set_color(self, color_id=None):
+		if color_id is not None:
+			self.main_window.setting_change("color", "set", color_id)
+		else:
+			self.main_window.setting_change("color", "carousel")
+		self.update()
+
+	def update(self):
+		for i in self.colors:
+			i.setChecked(False)
+
+		print(self.colors)
+
+		self.colors[draw.variables["color"]["current"] - 1].setChecked(True)
+
 class MainWindow(QMainWindow):
 	def __init__(self):
 		super(MainWindow, self).__init__()
@@ -251,6 +334,88 @@ class MainWindow(QMainWindow):
 		self.setLayout(self.layout)
 		# - = - = - = - = - = - = - = - = - = - = -
 
+		# - = - = - = - = - = - = - = - = - = - = -
+		# Menubar (Alt/File menu under window title)
+		self.menu_bar = self.menuBar()
+
+		# - = - =
+
+		# Add category "File"
+		self.file_menu_bar = self.menu_bar.addMenu("File")
+
+		open_action = QAction("Open", self)
+		open_action.setShortcuts([QKeySequence("O"), QKeySequence("Ctrl+O")])
+		open_action.triggered.connect(self.open_file)
+
+		exit_action = QAction("Exit", self)
+		exit_action.setShortcuts([QKeySequence("Esc"), QKeySequence("Ctrl+Q")])
+		exit_action.triggered.connect(self.close)
+
+		# Add to menu
+		self.file_menu_bar.addAction(open_action)
+		self.file_menu_bar.addSeparator()  # Разделитель
+		self.file_menu_bar.addAction(exit_action)
+
+		# - = - =
+
+		# Add category "View"
+		self.view_menu_bar = self.menu_bar.addMenu("View")
+
+		# - = - =
+
+		contrast = QAction("Contrast", self)
+		contrast.triggered.connect(lambda: self.setting_change("contrast", "reset"))
+
+		contrast_plus = QAction("+", self)
+		contrast_plus.setShortcut(QKeySequence("2"))
+		contrast_plus.triggered.connect(lambda: self.setting_change("contrast", "plus"))
+
+		contrast_minus = QAction("-", self)
+		contrast_minus.setShortcut(QKeySequence("1"))
+		contrast_minus.triggered.connect(lambda: self.setting_change("contrast", "minus"))
+
+		# Add to menu
+		self.view_menu_bar.addAction(contrast)
+		self.view_menu_bar.addAction(contrast_plus)
+		self.view_menu_bar.addAction(contrast_minus)
+
+		# - = - =
+		self.view_menu_bar.addSeparator()
+		# - = - =
+
+		maxdBFS = QAction("maxdBFS", self)
+		maxdBFS.triggered.connect(lambda: self.setting_change("maxdBFS", "reset"))
+
+		maxdBFS_plus = QAction("+", self)
+		maxdBFS_plus.setShortcut(QKeySequence("4"))
+		maxdBFS_plus.triggered.connect(lambda: self.setting_change("maxdBFS", "plus"))
+
+		maxdBFS_minus = QAction("-", self)
+		maxdBFS_minus.setShortcut(QKeySequence("3"))
+		maxdBFS_minus.triggered.connect(lambda: self.setting_change("maxdBFS", "minus"))
+
+		# Add to menu
+		self.view_menu_bar.addAction(maxdBFS)
+		self.view_menu_bar.addAction(maxdBFS_plus)
+		self.view_menu_bar.addAction(maxdBFS_minus)
+
+		# - = - =
+		self.view_menu_bar.addSeparator()
+		# - = - =
+
+		self.color_menu_bar = self.menu_bar.addMenu("Palette")
+		PaletteButtonsClass(self)
+
+		channels = QAction("Show multiple channels", self)
+		channels.setCheckable(True)
+		channels.setShortcut(QKeySequence("S"))
+		channels.triggered.connect(lambda: self.setting_change("channels", "set", value=1+channels.isChecked()))
+
+		# Add to menu
+		self.view_menu_bar.addAction(channels)
+
+		# - = - = - = - = - = - = - = - = - = - = -
+
 		# Minimum sox image size
 		self.setMinimumSize(100+144, 130)
 
@@ -268,28 +433,12 @@ class MainWindow(QMainWindow):
 			render.redraw_required_message_ticks = 30
 
 		# - = - = - = - = - = - = - = - = - = - = -
-		# contrast
-		if event.key() == Qt.Key_1:
-			self.setting_change("contrast", "minus")
-		if event.key() == Qt.Key_2:
-			self.setting_change("contrast", "plus")
-		# - = - = - = - = - = - = - = - = - = - = -
 		# channels
-		if event.key() == Qt.Key_S:
-			self.setting_change("channels", "carousel")
-		# - = - = - = - = - = - = - = - = - = - = -
-		# channels
-		if event.key() == Qt.Key_C:
-			self.setting_change("color", "carousel")
-		# - = - = - = - = - = - = - = - = - = - = -
-		# maxdBFS
-		if event.key() == Qt.Key_3:
-			self.setting_change("maxdBFS", "minus")
-		if event.key() == Qt.Key_4:
-			self.setting_change("maxdBFS", "plus")
+		#if event.key() == Qt.Key_C:
+		#	self.setting_change("color", "carousel")
 		# - = - = - = - = - = - = - = - = - = - = -
 
-	def setting_change(self, setting, action):
+	def setting_change(self, setting, action, value=None):
 		if setting not in draw.variables:
 			raise ValueError("Specified setting not in draw.variables")
 		elif action == "plus":
@@ -307,6 +456,12 @@ class MainWindow(QMainWindow):
 				draw.variables[setting]["current"] = draw.variables[setting]["current"] + 1
 			else:
 				draw.variables[setting]["current"] = draw.variables[setting]["min"]
+		elif action == "reset":
+			# Reset to default variables
+			draw.variables[setting]["current"] = draw.default_variables[setting]["current"]
+		elif action == "set":
+			# Manually set value
+			draw.variables[setting]["current"] = value
 
 		print("\n\n" + str(draw.variables))
 		render.redraw_required = True
@@ -314,8 +469,11 @@ class MainWindow(QMainWindow):
 			symbol = "+"
 		elif action == "minus":
 			symbol = "-"
-		elif action == "carousel":
+		elif action == "carousel" or action == "set":
 			symbol = ">"
+		elif action == "reset":
+			symbol = "reset"
+
 		render.redraw_required_message = f"Setting \"{setting}\" changed: [{symbol}] {draw.variables[setting]['current']}"
 		render.redraw_required_message += f" (min {draw.variables[setting]['min']} / max {draw.variables[setting]['max']})"
 		render.redraw_required_message_ticks = 30
@@ -342,6 +500,16 @@ class MainWindow(QMainWindow):
 
 		event.acceptProposedAction()
 	# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
+
+	def open_file(self):
+		# Open dialog
+		file_path, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*.*)")
+
+		# Если файл выбран, сохраняем путь в переменную
+		if file_path:
+			print(f"File selected: {file_path}")
+			global file_controller
+			file_controller.open_file(file_path)
 
 	def redraw_spectrogram(self):
 		print("Redrawing..")
