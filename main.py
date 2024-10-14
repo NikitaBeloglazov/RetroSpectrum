@@ -21,6 +21,9 @@ from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import QMenuBar, QFileDialog
 from PySide6.QtGui import QAction, QKeySequence, QActionGroup
 
+from PySide6.QtGui import QDesktopServices # Website opener
+from PySide6.QtWidgets import QMessageBox # For About dialog box
+
 from PySide6.QtGui import QIcon
 
 # - = - = - = - = - = - = -
@@ -29,6 +32,7 @@ modules_path = os.path.dirname(os.path.realpath(__file__)) # get currently runni
 sys.path.append(modules_path)
 import ffprobe
 from render import dialog_boxes
+from __version__ import __version__
 # - = - = - = - = - = - = - = - = - = - = -
 
 parser = argparse.ArgumentParser(
@@ -409,6 +413,22 @@ class MainWindow(QMainWindow):
 		self.color_menu_bar = self.menu_bar.addMenu("Palette")
 		PaletteButtonsClass(self)
 		# - = - = - = - = - = - = - = - = - = - = -
+		self.help_menu_bar = self.menu_bar.addMenu("Help")
+
+		website = QAction("Open project page", self)
+		website.setShortcut(QKeySequence("F1"))
+		website.triggered.connect(lambda: QDesktopServices.openUrl("https://github.com/NikitaBeloglazov/RetroSpectrum"))
+		self.help_menu_bar.addAction(website)
+
+		website = QAction("Issues", self)
+		website.triggered.connect(lambda: QDesktopServices.openUrl("https://github.com/NikitaBeloglazov/RetroSpectrum/issues"))
+		self.help_menu_bar.addAction(website)
+
+		about = QAction("About", self)
+		about.setShortcut(QKeySequence("Shift+F1"))
+		about.triggered.connect(self.about_box)
+		self.help_menu_bar.addAction(about)
+		# - = - = - = - = - = - = - = - = - = - = -
 		self.update_qaction_entries()
 
 		# Minimum sox image size
@@ -425,6 +445,18 @@ class MainWindow(QMainWindow):
 			self.channels.setChecked(False)
 		else:
 			self.channels.setChecked(True)
+
+	def about_box(self):
+		QMessageBox.about(self, "RetroSpectrum - About",
+		f"""
+		<h2>RetroSpectrum</h2>
+		<p><b>Version:</b> {__version__}</p>
+		<p>Developed by <i><a href='https://github.com/NikitaBeloglazov'>Nikita Beloglazov</a></i></p>
+		<hr>
+		<p>This application is designed to help you with view spectrogram of the file</p>
+		<p><a href='https://github.com/NikitaBeloglazov/RetroSpectrum' style='color: #1E90FF;'>Visit our project page</a></p>
+		<p>Copyright &copy; 2024 Nikita Beloglazov. All rights reserved.</p>
+		""")
 
 
 	def keyPressEvent(self, event):
@@ -473,7 +505,7 @@ class MainWindow(QMainWindow):
 			# Manually set value
 			draw.variables[setting]["current"] = value
 
-		print("\n\n" + str(draw.variables))
+		# print("\n\n" + str(draw.variables))
 		render.redraw_required = True
 		if action == "plus":
 			symbol = "+"
