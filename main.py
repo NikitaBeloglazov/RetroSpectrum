@@ -354,8 +354,8 @@ class MainWindow(QMainWindow):
 
 		# - = - =
 
-		contrast = QAction("Contrast", self)
-		contrast.triggered.connect(lambda: self.setting_change("contrast", "reset"))
+		self.contrast = QAction("Contrast", self)
+		self.contrast.triggered.connect(lambda: self.setting_change("contrast", "reset"))
 
 		contrast_plus = QAction("+", self)
 		contrast_plus.setShortcut(QKeySequence("2"))
@@ -366,7 +366,7 @@ class MainWindow(QMainWindow):
 		contrast_minus.triggered.connect(lambda: self.setting_change("contrast", "minus"))
 
 		# Add to menu
-		self.view_menu_bar.addAction(contrast)
+		self.view_menu_bar.addAction(self.contrast)
 		self.view_menu_bar.addAction(contrast_plus)
 		self.view_menu_bar.addAction(contrast_minus)
 
@@ -374,8 +374,8 @@ class MainWindow(QMainWindow):
 		self.view_menu_bar.addSeparator()
 		# - = - =
 
-		maxdBFS = QAction("maxdBFS", self)
-		maxdBFS.triggered.connect(lambda: self.setting_change("maxdBFS", "reset"))
+		self.maxdBFS = QAction("maxdBFS", self)
+		self.maxdBFS.triggered.connect(lambda: self.setting_change("maxdBFS", "reset"))
 
 		maxdBFS_plus = QAction("+", self)
 		maxdBFS_plus.setShortcut(QKeySequence("4"))
@@ -386,7 +386,7 @@ class MainWindow(QMainWindow):
 		maxdBFS_minus.triggered.connect(lambda: self.setting_change("maxdBFS", "minus"))
 
 		# Add to menu
-		self.view_menu_bar.addAction(maxdBFS)
+		self.view_menu_bar.addAction(self.maxdBFS)
 		self.view_menu_bar.addAction(maxdBFS_plus)
 		self.view_menu_bar.addAction(maxdBFS_minus)
 
@@ -409,12 +409,23 @@ class MainWindow(QMainWindow):
 		self.color_menu_bar = self.menu_bar.addMenu("Palette")
 		PaletteButtonsClass(self)
 		# - = - = - = - = - = - = - = - = - = - = -
+		self.update_qaction_entries()
 
 		# Minimum sox image size
 		self.setMinimumSize(100+144, 130)
 
 		self.setCentralWidget(render.label)
 		#self.resize(pixmap.width(), pixmap.height())
+
+	def update_qaction_entries(self):
+		self.contrast.setText(f'Contrast: {draw.variables["contrast"]["current"]} (min {draw.variables["contrast"]["min"]} / max {draw.variables["contrast"]["max"]})')
+		self.maxdBFS.setText(f'maxdBFS: {draw.variables["maxdBFS"]["current"]} (min {draw.variables["maxdBFS"]["min"]} / max {draw.variables["maxdBFS"]["max"]})')
+
+		if draw.variables["channels"]["current"] == 1:
+			self.channels.setChecked(False)
+		else:
+			self.channels.setChecked(True)
+
 
 	def keyPressEvent(self, event):
 		# Force redraw
@@ -432,6 +443,7 @@ class MainWindow(QMainWindow):
 		render.redraw_required = True
 		render.redraw_required_message = "The settings have been reset"
 		render.redraw_required_message_ticks = 30
+		self.update_qaction_entries()
 
 	def channels_switch(self):
 		self.setting_change("channels", "set", value=self.channels.isChecked()+1)
@@ -475,6 +487,7 @@ class MainWindow(QMainWindow):
 		render.redraw_required_message = f"Setting \"{setting}\" changed: [{symbol}] {draw.variables[setting]['current']}"
 		render.redraw_required_message += f" (min {draw.variables[setting]['min']} / max {draw.variables[setting]['max']})"
 		render.redraw_required_message_ticks = 30
+		self.update_qaction_entries()
 
 	# - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = - = -
 	# Drag-n-drop support
